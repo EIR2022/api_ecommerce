@@ -12,6 +12,7 @@
     "ecmaVersion": "latest"
   },
   "rules": {
-    "import/newline-after-import": "off"
+    "import/newline-after-import": "off",
+    "no-plusplus": "off"
   }
 }
