@@ -9,6 +9,7 @@ const signup = async (req, res) => {
   try {
     const code = random(4);
     req.body.codeverification = await bcrypt.hash(String(code), 10);
+    req.body.password = await bcrypt.hash(req.body.password, 10);
     const user = new User(req.body);
     await user.save();
     const info = await transporter.sendMail({
