@@ -5,7 +5,10 @@ const validateSchema = (schema, property) => (req, res, next) => {
   if (error)
     return res
       .status(StatusCodes.UNPROCESSABLE_ENTITY)
-      .send({ error: error.details.map(i => i.message).join(',') });
+      .send({
+        status: 'FAIL',
+        error: error.details.map(i => i.message).join(','),
+      });
   return next();
 };
 module.exports = validateSchema;

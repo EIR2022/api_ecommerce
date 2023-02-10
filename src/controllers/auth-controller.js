@@ -4,6 +4,7 @@ const { StatusCodes } = require('http-status-codes');
 const User = require('../models/database/user-model');
 const random = require('../utils/random');
 const transporter = require('../utils/transporter');
+const token = require('../utils/token');
 
 const signup = async (req, res) => {
   try {
@@ -258,8 +259,120 @@ const validateCode = async (req, res) => {
       },
     });
   } catch (err) {
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send({ error: err });
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .send({ status: 'FAIL', error: err });
   }
 };
 
-module.exports = { signup, validateCode };
+const login = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) {
+      return res.status(StatusCodes.OK).send({
+        status: 'FAIL',
+        error: { message: 'El usuario no existe' },
+      });
+    }
+
+    const match = await bcrypt.compare(req.body.password, user.password);
+    if (!match) {
+      return res.status(StatusCodes.OK).send({
+        status: 'FAIL',
+        error: { message: 'Contraseña incorrecta, intenta de nuevo' },
+      });
+    }
+
+    const accessToken = token.generateAccessToken(user.email);
+    const refreshToken = token.generateRefreshToken(user.email);
+
+    user.sessiontoken = user.sessiontoken.concat({ accessToken, refreshToken });
+    await user.save();
+
+    return res
+      .status(StatusCodes.OK)
+      .send({ status: 'OK', data: { accessToken, refreshToken } });
+  } catch (err) {
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .send({ status: 'FAIL', error: err });
+  }
+};
+
+const logout = async (req, res) => {
+  try {
+    const tk = req.headers.authorization.replace('Bearer ', '');
+    const user = await User.findOne({ email: req.email });
+
+    user.sessiontoken = user.sessiontoken.filter(c => c.accessToken !== tk);
+    await user.save();
+
+    return res
+      .status(StatusCodes.OK)
+      .send({ status: 'OK', data: { message: 'Cerro sesion correctamente' } });
+  } catch (err) {
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .send({ status: 'FAIL', error: err });
+  }
+};
+
+const logoutAll = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.email });
+
+    user.sessiontoken.splice(0, user.sessiontoken.length);
+    await user.save();
+
+    return res
+      .status(StatusCodes.OK)
+      .send({ status: 'OK', data: { message: 'Cerro sesion correctamente' } });
+  } catch (err) {
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .send({ status: 'FAIL', error: err });
+  }
+};
+
+const fnrefreshToken = async (req, res) => {
+  try {
+    const user = await User.findOne({
+      'sessiontoken.refreshToken': req.body.refreshToken,
+    });
+
+    if (!user) {
+      return res.status(StatusCodes.UNAUTHORIZED).send({
+        status: 'FAIL',
+        error: { message: 'token invalido' },
+      });
+    }
+
+    const tokens = user.sessiontoken.filter(
+      c => c.refreshToken !== req.body.refreshToken,
+    );
+
+    const accessToken = token.generateAccessToken(user.email);
+    const refreshToken = token.generateRefreshToken(user.email);
+
+    tokens.push({ accessToken, refreshToken });
+    user.sessiontoken = tokens;
+    await user.save();
+
+    return res
+      .status(StatusCodes.OK)
+      .send({ status: 'OK', data: { accessToken, refreshToken } });
+  } catch (err) {
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .send({ status: 'FAIL', error: err });
+  }
+};
+
+module.exports = {
+  signup,
+  validateCode,
+  login,
+  logout,
+  logoutAll,
+  fnrefreshToken,
+};

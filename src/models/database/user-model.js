@@ -5,7 +5,7 @@ const userSchema = new Schema({
   email: { type: String, unique: true },
   password: String,
   codeverification: String,
-  sessiontoken: [{ token: String }],
+  sessiontoken: [{ accessToken: String, refreshToken: String }],
   profile: {
     name: {
       first: String,
