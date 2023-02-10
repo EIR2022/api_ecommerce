@@ -108,4 +108,85 @@ describe('auth', () => {
       );
     });
   });
+
+  describe('POST api/v1/auth/login', () => {
+    test('should create a usuario', async () => {
+      await supertest(app)
+        .post('/api/v1/auth/signup')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' });
+
+      await supertest(app)
+        .post('/api/v1/auth/login')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' })
+        .expect(200);
+    });
+  });
+
+  describe('POST api/v1/auth/refreshToken', () => {
+    test('should refresh token', async () => {
+      await supertest(app)
+        .post('/api/v1/auth/signup')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' });
+
+      const res = await supertest(app)
+        .post('/api/v1/auth/login')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' })
+        .expect(200);
+
+      await supertest(app)
+        .post('/api/v1/auth/refreshToken')
+        .send({ refreshToken: res._body.data.refreshToken })
+        .expect(200);
+    });
+
+    test('should no refresh token', async () => {
+      await supertest(app)
+        .post('/api/v1/auth/signup')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' });
+
+      const res = await supertest(app)
+        .post('/api/v1/auth/login')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' })
+        .expect(200);
+
+      await supertest(app)
+        .post('/api/v1/auth/refreshToken')
+        .send({ refreshToken: res._body.data.accessToken })
+        .expect(401);
+    });
+  });
+
+  describe('POST api/v1/auth/refreshToken', () => {
+    test('should a single logout', async () => {
+      await supertest(app)
+        .post('/api/v1/auth/signup')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' });
+
+      const res = await supertest(app)
+        .post('/api/v1/auth/login')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' })
+        .expect(200);
+
+      await supertest(app)
+        .post('/api/v1/auth/logout')
+        .set('Authorization', `Bearer ${res._body.data.accessToken}`)
+        .expect(200);
+    });
+
+    test('should a single logout', async () => {
+      await supertest(app)
+        .post('/api/v1/auth/signup')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' });
+
+      const res = await supertest(app)
+        .post('/api/v1/auth/login')
+        .send({ email: 'test11@gmail.com', password: 'testpassword' })
+        .expect(200);
+
+      await supertest(app)
+        .post('/api/v1/auth/logoutAll')
+        .set('Authorization', `Bearer ${res._body.data.accessToken}`)
+        .expect(200);
+    });
+  });
 });
